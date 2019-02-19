@@ -3,12 +3,27 @@
 import hashlib, os, signal, sys, socket, select, base64, ConfigParser
 from Crypto.Cipher import AES
 
+def sigint_handler(signum, frame):
+    print '\nShutting down criptoChat...\n'
+    sys.exit()
+
+signal.signal(signal.SIGINT, sigint_handler)
+
+def hasher(key):
+	hash_object = hashlib.sha512(key)
+	hexd = hash_object.hexdigest()
+	hash_object = hashlib.md5(hexd)
+	hex_dig = hash_object.hexdigest()
+	return hex_dig
+
 config = ConfigParser.RawConfigParser()
 config.read(r'cChat.conf')
 HOST = config.get('config', 'HOST')
 PORT = int(config.get('config', 'PORT'))
 PASSWORD = config.get('config', 'PASSWORD')
 VIEW = str(config.get('config', 'VIEW'))
+
+key = hasher(PASSWORD)
 
 SOCKET_LIST = []
 RECV_BUFFER = 4096
