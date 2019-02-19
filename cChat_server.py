@@ -16,8 +16,27 @@ def hasher(key):
 	hex_dig = hash_object.hexdigest()
 	return hex_dig
 
+def encrypt(secret,data):
+	BLOCK_SIZE = 32
+	PADDING = '{'
+	pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * PADDING
+	EncodeAES = lambda c, s: base64.b64encode(c.encrypt(pad(s)))
+	cipher = AES.new(secret)
+	encoded = EncodeAES(cipher, data)
+	return encoded
+
+def decrypt(secret,data):
+	BLOCK_SIZE = 32
+	PADDING = '{'
+	pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * PADDING
+	DecodeAES = lambda c, e: c.decrypt(base64.b64decode(e)).rstrip(PADDING)
+	cipher = AES.new(secret)
+	decoded = DecodeAES(cipher, data)
+	return decoded
+
 config = ConfigParser.RawConfigParser()
 config.read(r'cChat.conf')
+
 HOST = config.get('config', 'HOST')
 PORT = int(config.get('config', 'PORT'))
 PASSWORD = config.get('config', 'PASSWORD')
@@ -39,6 +58,57 @@ def cChat():
 
     print "Server started on port " + str(PORT)
 
+    while 1:
+
+        ready_to_read,ready_to_write,in_error = select.select(SOCKET_LIST,[],[],0)
+
+        for sock in ready_to_read:
+
+            if sock == server_socket:
+                sockfd, addr = server_socket.accept()
+                SOCKET_LIST.append(sockfd)
+                print "User (%s, %s) connected" % addr
+
+                broadcast(server_socket, sockfd, encrypt(key,"[%s:%s] is here...\n" % addr))
+
+            else:
+                try:
+                    data = sock.recv(RECV_BUFFER)
+                    data = decrypt(key,data)
+                    if data:
+
+                        broadcast(server_socket, sock,encrypt(key,"\r" + data))
+                        if VIEW == '1':
+                          print data
+                    else:
+
+                        if sock in SOCKET_LIST:
+                            SOCKET_LIST.remove(sock)
+
+                        broadcast(server_socket, sock,encrypt(key,"user (%s, %s) has left the chat\n" % addr))
+
+                except:
+                    broadcast(server_socket, sock, "user (%s, %s) has left the chat\n" % addr)
+                    continue
+
+    server_socket.close()
+
+def broadcast (server_socket, sock, message):
+    for socket in SOCKET_LIST:
+
+        if socket != server_socket and socket != sock :
+            try :
+                socket.send(message)
+            except :
+
+                socket.close()
+
+                if socket in SOCKET_LIST:
+                    SOCKET_LIST.remove(socket)
+
 if __name__ == "__main__":
 
-    sys.exit(cChat())
+	if not os.geteuid()==0:
+		sys.exit("\nOnly root can run this script\n")
+
+	sys.exit(cChat())
