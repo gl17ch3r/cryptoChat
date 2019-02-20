@@ -40,7 +40,17 @@ def chat_client():
         print '\nUsage : python cChat_client.py <hostname> <port> <password> <nick_name>\n'
         sys.exit()
 
+    host = sys.argv[1]
+    port = int(sys.argv[2])
+    key = sys.argv[3]
+    key = hasher(key)
+    uname = sys.argv[4]
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(2)
+
 if __name__ == "__main__":
+
 	if not os.geteuid()==0:
 		sys.exit("\nOnly root can run this script\n")
 
