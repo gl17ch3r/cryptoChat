@@ -49,6 +49,41 @@ def chat_client():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(2)
 
+    try :
+        s.connect((host, port))
+
+    except :
+        print "\033[91m"+'Unable to connect'+"\033[0m"
+        sys.exit()
+
+    print "\nConnected to remote host. Send fucking messages.\n"
+    sys.stdout.write("\033[34m"+'\nMe: '+ "\033[0m"); sys.stdout.flush()
+
+    while 1:
+        socket_list = [sys.stdin, s]
+        read_sockets, write_sockets, error_sockets = select.select(socket_list , [], [])
+
+        for sock in read_sockets:
+            if sock == s:
+
+                data = sock.recv(4096)
+
+                if not data :
+                    print "\033[91m"+"\nDisconnected from chat server"+"\033[0m"
+                    sys.exit()
+                else :
+                    data = decrypt(key,data)
+                    sys.stdout.write(data)
+                    sys.stdout.write("\033[34m"+'\nMe: '+ "\033[0m"); sys.stdout.flush()
+
+            else :
+
+                msg = sys.stdin.readline()
+                msg = uname +': '+msg
+                msg = encrypt(key,msg)
+                s.send(msg)
+                sys.stdout.write("\033[34m"+'\nMe: '+ "\033[0m"); sys.stdout.flush()
+
 if __name__ == "__main__":
 
 	if not os.geteuid()==0:
